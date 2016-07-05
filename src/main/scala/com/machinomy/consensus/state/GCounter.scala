@@ -1,6 +1,4 @@
-package com.machinomy.consensus.state.counters
-
-import com.machinomy.consensus.state.Convergent
+package com.machinomy.consensus.state
 
 case class GCounter[K, E : Numeric](state: Map[K, E] = Map.empty[K, E]) extends Convergent[E, E] {
   override type Self = GCounter[K, E]

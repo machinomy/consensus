@@ -1,4 +1,4 @@
-package com.machinomy.consensus.state.counters
+package com.machinomy.consensus.state
 
 import org.scalatest.FunSuite
 

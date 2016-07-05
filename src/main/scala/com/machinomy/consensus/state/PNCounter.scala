@@ -1,6 +1,4 @@
-package com.machinomy.consensus.state.counters
-
-import com.machinomy.consensus.state.Convergent
+package com.machinomy.consensus.state
 
 case class PNCounter[K, E: Numeric](increments: GCounter[K, E], decrements: GCounter[K, E]) extends Convergent[E, E] {
   override type Self = PNCounter[K, E]

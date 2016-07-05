@@ -1,6 +1,4 @@
-package com.machinomy.consensus.state.sets
-
-import com.machinomy.consensus.state.Convergent
+package com.machinomy.consensus.state
 
 class GSet[E](set: Set[E] = Set.empty[E]) extends Convergent[E, Set[E]] {
   override type Self = GSet[E]
