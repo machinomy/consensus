@@ -1,5 +1,6 @@
 package com.machinomy.consensus.sets
 
+import com.machinomy.consensus.state.sets.GSet
 import org.scalatest.FunSuite
 
 class GSetSuite extends FunSuite {

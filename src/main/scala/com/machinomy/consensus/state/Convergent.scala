@@ -1,4 +1,4 @@
-package com.machinomy.consensus
+package com.machinomy.consensus.state
 
 trait Convergent[Element, Value] {
   type Self <: Convergent[Element, Value]
