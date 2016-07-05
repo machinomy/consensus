@@ -2,7 +2,7 @@ package com.machinomy.consensus.state.counters
 
 import com.machinomy.consensus.state.Convergent
 
-class GCounter[K, E : Numeric](val state: Map[K, E] = Map.empty[K, E]) extends Convergent[E, E] {
+case class GCounter[K, E : Numeric](state: Map[K, E] = Map.empty[K, E]) extends Convergent[E, E] {
   override type Self = GCounter[K, E]
 
   def +(i: (K, E)): Self = increment(i._1, i._2)
