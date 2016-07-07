@@ -16,6 +16,12 @@ case class PNCounter[K, E: Numeric](increments: GCounter[K, E], decrements: GCou
     }
   }
 
+  def update(key: K, newValue: E): Self = {
+    val num = implicitly[Numeric[E]]
+    val delta = num.minus(newValue, get(key))
+    increment(key, delta)
+  }
+
   def get(key: K): E = {
     val num = implicitly[Numeric[E]]
     val increment = increments.get(key)
