@@ -24,4 +24,9 @@ class PNCounterSuite extends FunSuite {
     val a = PNCounter[Int, Int]().increment(1, 2).increment(2, 3).increment(1, -1)
     assert(a.get(1) === 1)
   }
+
+  test("Could get table") {
+    val a = PNCounter[Int, Int]().increment(1, 2).increment(2, 3).increment(1, -1)
+    assert(a.table === Map(1 -> 1, 2 -> 3))
+  }
 }

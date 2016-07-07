@@ -25,7 +25,7 @@ case class PNCounter[K, E: Numeric](increments: GCounter[K, E], decrements: GCou
 
   def table: Map[K, E] = {
     val keys = increments.state.keys.toSet ++ decrements.state.keys.toSet
-    keys.foldLeft(Map.empty[K, E]) { case (acc, (k, e)) =>
+    keys.foldLeft(Map.empty[K, E]) { (acc, k) =>
         acc.updated(k, get(k))
     }
   }
