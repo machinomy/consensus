@@ -108,6 +108,20 @@ class Participant(identifier: Identifier, neighbors: Set[Identifier]) extends Ac
     val balanced = row.mapping.update(Identifier(-1), Production(balance, 40))
     println(s"================================================")
     println(s"||||||||||> Last row balanced: at ${row.timestamp}: ${balanced.table}")
+    val producers: Map[Identifier, Production] = balanced.table.filter(_._2.volume < 0)
+    val consumers = balanced.table.filter(_._2.volume >= 0)
+    val averagePrice = producers.values.map(p => p.volume * p.cost).sum / producers.values.map(_.volume).sum
+    println(s"AVERAGE PRICE: $averagePrice")
+
+    for (destination <- producers.keys.toSet - identifier) {
+      producers.get(destination) match {
+        case Some(production) =>
+          val moneys = -1 * production.volume * averagePrice
+          println(s"Paying $moneys to $destination")
+        case None =>
+      }
+    }
+    println(s"================================================")
   }
 
   def nextRandom = Random.nextInt
