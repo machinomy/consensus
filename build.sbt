@@ -8,12 +8,20 @@ scalaVersion := "2.11.8"
 
 organization := "com.machinomy"
 
+resolvers ++= Seq(
+  "Machinomy" at "http://machinomy.com:8081/artifactory/libs-snapshot-local"
+)
+
 libraryDependencies ++= Seq(
   "org.scodec" %% "scodec-core" % "1.9.0",
   "org.slf4j" % "slf4j-simple" % "1.7.21",
   "org.scalatest" %% "scalatest" % "2.2.6" % "test",
   "com.typesafe.scala-logging" %% "scala-logging" % "3.1.0",
-  "com.github.nscala-time" %% "nscala-time" % "2.10.0"
+  "com.github.nscala-time" %% "nscala-time" % "2.10.0",
+  "com.typesafe.akka" %% "akka-actor" % "2.4.5",
+  "org.slf4j" % "slf4j-simple" % "1.7.21",
+  "org.scodec" %% "scodec-core" % "1.9.0",
+  "com.machinomy" %% "xicity" % "0.0.2-SNAPSHOT"
 )
 
 def doIfNotSnapshot(step: ReleaseStep) = {

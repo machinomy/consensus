@@ -19,6 +19,11 @@ case class GCounter[K, E : Numeric](state: Map[K, E] = Map.empty[K, E]) extends 
     }
   }
 
+  def get(key: K): E = {
+    val num = implicitly[Numeric[E]]
+    state.getOrElse(key, num.zero)
+  }
+
   override def merge(other: Self): Self = {
     val num = implicitly[Numeric[E]]
     val nextState = state.foldLeft(other.state) { case (acc, (key, value)) =>

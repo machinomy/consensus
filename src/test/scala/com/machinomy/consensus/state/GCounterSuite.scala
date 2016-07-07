@@ -19,4 +19,12 @@ class GCounterSuite extends FunSuite {
     val c = a.merge(b)
     assert(c.value === 2 + 3 + 4)
   }
+
+  test("GCounter can get replica value") {
+    val a = GCounter[Int, Int]()
+    assert(a.get(0) === 0)
+    val b = a.increment(1, 2).increment(2, 3)
+    assert(b.get(1) === 2)
+    assert(b.get(2) === 3)
+  }
 }

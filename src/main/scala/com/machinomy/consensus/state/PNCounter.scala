@@ -16,6 +16,20 @@ case class PNCounter[K, E: Numeric](increments: GCounter[K, E], decrements: GCou
     }
   }
 
+  def get(key: K): E = {
+    val num = implicitly[Numeric[E]]
+    val increment = increments.get(key)
+    val decrement = decrements.get(key)
+    num.minus(increment, decrement)
+  }
+
+  def table: Map[K, E] = {
+    val keys = increments.state.keys.toSet ++ decrements.state.keys.toSet
+    keys.foldLeft(Map.empty[K, E]) { case (acc, (k, e)) =>
+        acc.updated(k, get(k))
+    }
+  }
+
   override def merge(other: Self): Self =
     copy(increments = other.increments.merge(increments), decrements = other.decrements.merge(decrements))
 
