@@ -21,76 +21,95 @@ class Participant(identifier: Identifier, neighbors: Set[Identifier]) extends Ac
 
   import context.dispatcher
 
-  var measureTick: Cancellable = null
-  var lastMeasure: Production = Production(0, 0)
-  var prevLastMeasure: Production = Production(0, 0)
-  var lastMeasureTime: DateTime = DateTime.now
-  val cost: Double = 1
+  var currentRow: Row = Row(DateTime.now().getMillis, PNCounter[Identifier, Production]())
 
-  var canSend = false
-  var sendingTick: Cancellable = null
+  var measureTick: Cancellable = null
 
   override def preStart(): Unit = {
     nodeActor = context.actorOf(Node.props(identifier, self))
     clientNodeActor = context.actorOf(ClientNode.props(Node.Wrap(nodeActor, Parameters.default)))
-    measureTick = context.system.scheduler.scheduleOnce(duration.FiniteDuration(0, duration.SECONDS), self, Participant.MeasureTick)
   }
 
   override def receive: Receive = {
     case Node.IsReady() =>
       println("|||||--------------------> READY")
-      canSend = true
-      sendingTick = context.system.scheduler.schedule(duration.FiniteDuration(0, duration.SECONDS), QUANTUM, self, Participant.SendingTick)
+      measureTick = context.system.scheduler.schedule(2 * QUANTUM, QUANTUM, self, Participant.MeasureTick)
     case m: Message.Shot =>
       if (m.protocol == PROTOCOL) {
         Codec.decode[Row](BitVector(m.text)).toOption.map { f: DecodeResult[Row] => f.value } match {
           case Some(row) =>
-            println(s"|||||--------------------> Received $row")
+            println(s"|||||--------------------> Received ow at ${new DateTime(row.timestamp)}: ${row.mapping.table}")
             val theirTime = new DateTime(row.timestamp)
-            if (theirTime > lastMeasureTime + EPSILON) {
-              println(s"|||||--------------------> Their time is greater")
-              val nextTickDelta = lastMeasureTime.getMillis + QUANTUM.toMillis - theirTime.getMillis
+            if (theirTime.getMillis < currentRow.timestamp - EPSILON) {
+              println(s"|||||--------------------> Our schedule is lagging")
               measureTick.cancel()
-              measureTick = context.system.scheduler.scheduleOnce(duration.FiniteDuration(nextTickDelta, duration.MILLISECONDS), self, Participant.MeasureTick)
+              val nextTickDelta = QUANTUM.toMillis + theirTime.getMillis - currentRow.timestamp
+              measureTick = context.system.scheduler.schedule(duration.FiniteDuration(nextTickDelta, duration.MILLISECONDS), QUANTUM, self, Participant.MeasureTick)
               println(s"|||||--------------------> Adjusted MeasureTick")
             }
-            if (row.mapping.get(identifier) != prevLastMeasure) {
+            currentRow = if (row.timestamp < currentRow.timestamp) {
+              row.copy(mapping = currentRow.mapping.merge(row.mapping))
+            } else {
+              currentRow.copy(mapping = currentRow.mapping.merge(row.mapping))
+            }
+
+            println(s"|||||--------------------> Got new row at ${new DateTime(currentRow.timestamp)}: ${currentRow.mapping.table}")
+            /*if (row.mapping.get(identifier) != prevLastMeasure) {
               println(s"|||||--------------------> Received row contains ${row.mapping.get(identifier)} for me, expected $lastMeasure")
               val delta = implicitly[Numeric[Production]].minus(prevLastMeasure, row.mapping.get(identifier))
               val nextMapping = row.mapping.increment(identifier, delta)
               disseminate(row.timestamp, nextMapping)
               sendingTick.cancel()
               sendingTick = context.system.scheduler.schedule(2 * QUANTUM, QUANTUM, self, Participant.SendingTick)
-            }
+            }*/
           case None => log.error(s"|||||--------------------> Achtung!!!! Got none instead of row")
         }
       }
     case Participant.SendingTick =>
       println(s"|||||--------------------> SendingTick")
-      val counter = PNCounter[Identifier, Production]().increment(identifier, lastMeasure)
-      disseminate(lastMeasureTime.getMillis, counter)
+      /*val counter = PNCounter[Identifier, Production]().increment(identifier, lastMeasure)
+      disseminate(lastMeasureTime.getMillis, counter)*/
     case Participant.MeasureTick =>
       println(s"|||||--------------------> MeasureTick")
-      prevLastMeasure = lastMeasure.copy()
+      val production = Production(Random.nextDouble(), cost)
+      settle(currentRow.copy())
+      currentRow = Row(DateTime.now.getMillis, PNCounter[Identifier, Production]().update(identifier, production))
+      disseminate()
+      /*prevLastMeasure = lastMeasure.copy()
       lastMeasure = Production(Random.nextDouble(), cost)
       lastMeasureTime = DateTime.now()
       measureTick.cancel()
       measureTick = context.system.scheduler.scheduleOnce(QUANTUM, self, Participant.MeasureTick)
-      println(s"|||||--------------------> Measured $lastMeasure")
+      println(s"|||||--------------------> Measured $lastMeasure")*/
   }
 
-  def disseminate(timestamp: Long, counter: PNCounter[Identifier, Production]): Unit = {
-    val row = Row(timestamp, counter)
-    val bytes = Codec.encode(row).toOption.get.toByteArray
+  def disseminate(): Unit = {
+    /*val row = Row(timestamp, PNCounter[Identifier, Production]())
+    row.mapping.table
+    val nextMapping = row.mapping.update(Identifier(1), Production(3,4))
+    val nextRow = row.copy(mapping = nextMapping)
+
+    val next2Mapping = row.mapping.merge(nextMapping)*/
+    val bytes = Codec.encode(currentRow).toOption.get.toByteArray
     val exp = expiration()
     for (n <- neighbors) {
       clientNodeActor ! Message.Shot(identifier, n, PROTOCOL, bytes, exp)
     }
   }
 
+  def settle(row: Row): Unit = {
+    println(s"||||||||||> Last row at ${new DateTime(row.timestamp)}: ${row.mapping.table}")
+    println(s"Pre-Balance: ${row.mapping.value.volume}")
+    val balance = -1 * row.mapping.value.volume
+    val balanced = row.mapping.increment(Identifier(-1), Production(balance, 40))
+    println(s"||||||||||> Last row balanced: at ${new DateTime(row.timestamp)}: ${balanced.table}")
+  }
+
   def nextRandom = Random.nextInt
 
   def expiration() = (DateTime.now.getMillis / 1000) + 20
+
+  def cost: Double = Random.nextInt.toDouble
 }
 
 object Participant {
