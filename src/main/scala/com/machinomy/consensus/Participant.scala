@@ -43,11 +43,11 @@ class Participant(identifier: Identifier, neighbors: Set[Identifier]) extends Ac
             if (theirTime.getMillis < currentRow.timestamp - EPSILON) {
               println(s"|||||--------------------> Our schedule is lagging")
               measureTick.cancel()
-              val nextTickDelta = QUANTUM.toMillis + theirTime.getMillis - currentRow.timestamp
+              val nextTickDelta = QUANTUM.toMillis + row.timestamp - currentRow.timestamp
               measureTick = context.system.scheduler.schedule(duration.FiniteDuration(nextTickDelta, duration.MILLISECONDS), QUANTUM, self, Participant.MeasureTick)
               println(s"|||||--------------------> Adjusted MeasureTick")
             }
-            currentRow = if (row.timestamp < currentRow.timestamp) {
+            currentRow = if (row.timestamp < currentRow.timestamp - EPSILON) {
               row.copy(mapping = currentRow.mapping.merge(row.mapping))
             } else {
               currentRow.copy(mapping = currentRow.mapping.merge(row.mapping))
@@ -74,7 +74,7 @@ class Participant(identifier: Identifier, neighbors: Set[Identifier]) extends Ac
       val production = Production(Random.nextDouble(), cost)
       settle(currentRow.copy())
       currentRow = Row(DateTime.now.getMillis, PNCounter[Identifier, Production]().update(identifier, production))
-      disseminate()
+      disseminate(currentRow)
       /*prevLastMeasure = lastMeasure.copy()
       lastMeasure = Production(Random.nextDouble(), cost)
       lastMeasureTime = DateTime.now()
@@ -83,14 +83,14 @@ class Participant(identifier: Identifier, neighbors: Set[Identifier]) extends Ac
       println(s"|||||--------------------> Measured $lastMeasure")*/
   }
 
-  def disseminate(): Unit = {
+  def disseminate(row: Row): Unit = {
     /*val row = Row(timestamp, PNCounter[Identifier, Production]())
     row.mapping.table
     val nextMapping = row.mapping.update(Identifier(1), Production(3,4))
     val nextRow = row.copy(mapping = nextMapping)
 
     val next2Mapping = row.mapping.merge(nextMapping)*/
-    val bytes = Codec.encode(currentRow).toOption.get.toByteArray
+    val bytes = Codec.encode(row).toOption.get.toByteArray
     val exp = expiration()
     for (n <- neighbors) {
       clientNodeActor ! Message.Shot(identifier, n, PROTOCOL, bytes, exp)
